@@ -1,0 +1,130 @@
+namespace DesignPatterns.Proxy
+{
+    // ЗАМІСНИК (Proxy) — структурний шаблон.
+    // Приклад: кешування запитів до YouTube.
+
+    public record Video(string Id, string Title);
+
+    // Спільний інтерфейс сервісу і замісника
+    public interface IThirdPartyYouTubeLib
+    {
+        List<string> ListVideos();
+        Video GetVideoInfo(string id);
+        void DownloadVideo(string id);
+    }
+
+    // Реальний сервіс (сторонній клас, який ми не змінюємо)
+    public class ThirdPartyYouTubeClass : IThirdPartyYouTubeLib
+    {
+        public List<string> ListVideos()
+        {
+            Console.WriteLine("  [Мережа] Запит списку відео...");
+            return new List<string> { "v1", "v2", "v3" };
+        }
+
+        public Video GetVideoInfo(string id)
+        {
+            Console.WriteLine($"  [Мережа] Запит інформації про відео '{id}'...");
+            return new Video(id, $"Відео №{id}");
+        }
+
+        public void DownloadVideo(string id)
+        {
+            Console.WriteLine($"  [Мережа] Завантаження відео '{id}'...");
+        }
+    }
+
+    // Замісник: перехоплює виклики і кешує результати
+    public class CachedYouTubeClass : IThirdPartyYouTubeLib
+    {
+        private readonly IThirdPartyYouTubeLib _service;
+        private List<string>? _listCache;
+        private readonly Dictionary<string, Video> _videoCache = new();
+        private readonly HashSet<string> _downloaded = new();
+
+        public CachedYouTubeClass(IThirdPartyYouTubeLib service)
+        {
+            _service = service;
+        }
+
+        public List<string> ListVideos()
+        {
+            if (_listCache == null)
+            {
+                _listCache = _service.ListVideos();
+            }
+            else
+            {
+                Console.WriteLine("  [Кеш] Список відео взято з кешу.");
+            }
+            return _listCache;
+        }
+
+        public Video GetVideoInfo(string id)
+        {
+            if (!_videoCache.TryGetValue(id, out var video))
+            {
+                video = _service.GetVideoInfo(id);
+                _videoCache[id] = video;
+            }
+            else
+            {
+                Console.WriteLine($"  [Кеш] Інформацію про відео '{id}' взято з кешу.");
+            }
+            return video;
+        }
+
+        public void DownloadVideo(string id)
+        {
+            if (_downloaded.Add(id))
+            {
+                _service.DownloadVideo(id);
+            }
+            else
+            {
+                Console.WriteLine($"  [Кеш] Відео '{id}' вже завантажено, пропускаємо.");
+            }
+        }
+    }
+
+    // Клієнт працює тільки з інтерфейсом і не знає, сервіс це чи замісник
+    public class YouTubeManager
+    {
+        private readonly IThirdPartyYouTubeLib _service;
+
+        public YouTubeManager(IThirdPartyYouTubeLib service)
+        {
+            _service = service;
+        }
+
+        public void ReactOnUserInput(string videoId)
+        {
+            var video = _service.GetVideoInfo(videoId);
+            Console.WriteLine($"  Отримано: {video.Title}");
+            _service.DownloadVideo(videoId);
+        }
+    }
+
+    public static class ProxyDemo
+    {
+        public static void Run()
+        {
+            Console.WriteLine("=== ЗАМІСНИК ===");
+
+            Console.WriteLine("--- Без замісника ---");
+            var manager1 = new YouTubeManager(new ThirdPartyYouTubeClass());
+            manager1.ReactOnUserInput("v1");
+            manager1.ReactOnUserInput("v1");
+
+            Console.WriteLine("--- Із замісником (кеш) ---");
+            var proxy = new CachedYouTubeClass(new ThirdPartyYouTubeClass());
+            var manager2 = new YouTubeManager(proxy);
+            manager2.ReactOnUserInput("v1");
+            manager2.ReactOnUserInput("v1");
+
+            proxy.ListVideos();
+            proxy.ListVideos();
+            Console.WriteLine();
+        }
+    }
+}
