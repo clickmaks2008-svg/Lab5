@@ -1,0 +1,124 @@
+namespace DesignPatterns.Iterator
+{
+    // ІТЕРАТОР (Iterator) — поведінковий шаблон.
+    // Приклад: обхід друзів і колег у соціальній мережі Facebook.
+
+    public record Profile(string Name, string Email);
+
+    // Спільний інтерфейс ітератора
+    public interface IProfileIterator
+    {
+        Profile GetNext();
+        bool HasMore();
+    }
+
+    // Інтерфейс колекції: створює ітератори
+    public interface ISocialNetwork
+    {
+        IProfileIterator CreateFriendsIterator(string profileEmail);
+        IProfileIterator CreateCoworkersIterator(string profileEmail);
+    }
+
+    // Колекція (у реальності це були б запити до API)
+    public class Facebook : ISocialNetwork
+    {
+        public List<Profile> GetFriends(string email)
+        {
+            Console.WriteLine($"  [Facebook] Запит друзів для '{email}'...");
+            return new List<Profile>
+            {
+                new("Анна", "anna@mail.com"),
+                new("Богдан", "bohdan@mail.com"),
+                new("Віка", "vika@mail.com")
+            };
+        }
+
+        public List<Profile> GetCoworkers(string email)
+        {
+            Console.WriteLine($"  [Facebook] Запит колег для '{email}'...");
+            return new List<Profile>
+            {
+                new("Григорій", "hryhorii@work.com"),
+                new("Дарина", "daryna@work.com")
+            };
+        }
+
+        public IProfileIterator CreateFriendsIterator(string profileEmail)
+            => new FacebookIterator(this, profileEmail, "friends");
+
+        public IProfileIterator CreateCoworkersIterator(string profileEmail)
+            => new FacebookIterator(this, profileEmail, "coworkers");
+    }
+
+    // Конкретний ітератор
+    public class FacebookIterator : IProfileIterator
+    {
+        private readonly Facebook _facebook;
+        private readonly string _email;
+        private readonly string _type;
+        private int _currentPosition;
+        private List<Profile>? _cache;
+
+        public FacebookIterator(Facebook facebook, string email, string type)
+        {
+            _facebook = facebook;
+            _email = email;
+            _type = type;
+        }
+
+        // Ліниве завантаження даних при першому зверненні
+        private void Lazy()
+        {
+            _cache ??= _type == "friends"
+                ? _facebook.GetFriends(_email)
+                : _facebook.GetCoworkers(_email);
+        }
+
+        public Profile GetNext()
+        {
+            if (!HasMore())
+                throw new InvalidOperationException("Більше немає елементів.");
+            var result = _cache![_currentPosition];
+            _currentPosition++;
+            return result;
+        }
+
+        public bool HasMore()
+        {
+            Lazy();
+            return _currentPosition < _cache!.Count;
+        }
+    }
+
+    // Клієнт працює тільки з інтерфейсами
+    public class SocialSpammer
+    {
+        public void Send(IProfileIterator iterator, string message)
+        {
+            while (iterator.HasMore())
+            {
+                var profile = iterator.GetNext();
+                Console.WriteLine($"  Надіслано '{message}' на {profile.Email} ({profile.Name})");
+            }
+        }
+    }
+
+    public static class IteratorDemo
+    {
+        public static void Run()
+        {
+            Console.WriteLine("=== ІТЕРАТОР ===");
+
+            var network = new Facebook();
+            var spammer = new SocialSpammer();
+            var me = "me@mail.com";
+
+            Console.WriteLine("--- Друзі ---");
+            spammer.Send(network.CreateFriendsIterator(me), "Привіт!");
+
+            Console.WriteLine("--- Колеги ---");
+            spammer.Send(network.CreateCoworkersIterator(me), "Зустріч о 10:00");
+            Console.WriteLine();
+        }
+    }
+}
