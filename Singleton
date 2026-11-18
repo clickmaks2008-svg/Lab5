@@ -1,0 +1,53 @@
+namespace DesignPatterns.Singleton
+{
+    // ОДИНАК (Singleton) — твірний шаблон.
+    // Приклад: одне підключення до бази даних на всю програму.
+
+    public sealed class Database
+    {
+        private static Database? _instance;
+        private static readonly object _lock = new();
+
+        // Приватний конструктор — не можна створити об'єкт через new ззовні
+        private Database()
+        {
+            Console.WriteLine("  [Database] Підключення до бази даних...");
+        }
+
+        public static Database GetInstance()
+        {
+            if (_instance == null)
+            {
+                lock (_lock)
+                {
+                    _instance ??= new Database();
+                }
+            }
+            return _instance;
+        }
+
+        public void Query(string sql) => Console.WriteLine($"  [Database] Виконано запит: {sql}");
+    }
+
+    public static class SingletonDemo
+    {
+        public static void Run()
+        {
+            Console.WriteLine("=== ОДИНАК ===");
+
+            var foo = Database.GetInstance();   // Клієнт А
+            var bar = Database.GetInstance();   // Клієнт Б
+
+            foo.Query("SELECT * FROM users");
+            bar.Query("SELECT * FROM orders");
+
+            Console.WriteLine($"foo і bar — той самий об'єкт? {ReferenceEquals(foo, bar)}");
+
+            // Перевірка в багатопоточному режимі
+            var instances = new Database[10];
+            Parallel.For(0, 10, i => instances[i] = Database.GetInstance());
+            Console.WriteLine($"10 потоків отримали один екземпляр? {instances.All(x => ReferenceEquals(x, instances[0]))}");
+            Console.WriteLine();
+        }
+    }
+}
