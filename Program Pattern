@@ -1,0 +1,49 @@
+using DesignPatterns.Iterator;
+using DesignPatterns.Proxy;
+using DesignPatterns.Singleton;
+
+Console.OutputEncoding = System.Text.Encoding.UTF8;
+Console.InputEncoding = System.Text.Encoding.UTF8;
+
+while (true)
+{
+    Console.WriteLine("========================================");
+    Console.WriteLine("   ШАБЛОНИ ПРОЄКТУВАННЯ");
+    Console.WriteLine("========================================");
+    Console.WriteLine("  1 - Одинак (Singleton)");
+    Console.WriteLine("  2 - Замісник (Proxy)");
+    Console.WriteLine("  3 - Ітератор (Iterator)");
+    Console.WriteLine("  4 - Запустити всі три");
+    Console.WriteLine("  0 - Вихід");
+    Console.Write("Ваш вибір: ");
+
+    var choice = Console.ReadLine()?.Trim();
+    Console.WriteLine();
+
+    switch (choice)
+    {
+        case "1":
+            SingletonDemo.Run();
+            break;
+        case "2":
+            ProxyDemo.Run();
+            break;
+        case "3":
+            IteratorDemo.Run();
+            break;
+        case "4":
+            SingletonDemo.Run();
+            ProxyDemo.Run();
+            IteratorDemo.Run();
+            break;
+        case "0":
+            return;
+        default:
+            Console.WriteLine("Невірний вибір, введіть 0-4.");
+            break;
+    }
+
+    Console.WriteLine("Натисніть Enter, щоб повернутися до меню...");
+    Console.ReadLine();
+    Console.Clear();
+}
